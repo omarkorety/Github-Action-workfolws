@@ -1,0 +1,113 @@
+name: create tages
+
+on:
+  pull_request:
+    types:
+      - closed
+  # push
+env:
+  IMAGE_NAME: search-dev
+  login_server: botittest3.azurecr.io
+jobs:
+  create_tages:
+    name: 'create tages'
+    runs-on: ubuntu-latest
+    # outputs:
+    #   output1: ${{ steps.step1.outputs.test }}
+    # environment: develoopment
+    defaults:
+      run:
+        shell: bash
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    # - name: Minor version for each merge
+    #   id: taggerDryRun
+    #   uses: anothrNick/github-tag-action@1.36.0
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.TOK }}
+    #     WITH_V: true
+    #     DRY_RUN: true
+ #step to login to acr using username and password
+    # - name: 'Docker Login'
+    #   uses: azure/docker-login@v1
+    #   with:
+    #     login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+    #     username: ${{ secrets.REGISTRY_USERNAME }}
+    #     password: ${{ secrets.REGISTRY_PASSWORD }}
+#     -
+#       name: Login to Docker Hub
+#       uses: docker/login-action@v2
+#       with:
+#         username: ${{ secrets.DOCKERHUB_USERNAME }}
+#         password: ${{ secrets.DOCKERHUB_TOKEN }}
+# #step to buil the image then push it to ACR 
+#     - name: Build the search image and push it to ACR
+#       uses: docker/build-push-action@v2
+#       with:
+#         push: true
+#         # tags: ${{ env.login_server }}/${{ env.IMAGE_NAME }}:${{ github.run_number }} #here is the path of the docker image in ACR 
+#         # tags: ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.run_number }} #here is the path of the docker image in ACR 
+#         tags: omarkorety/search-dev:latest
+
+#         file: ./docker/search/Dockerfile #PATH OF Dockerfile 
+
+#     - name: Repository Dispatch
+#       uses: peter-evans/repository-dispatch@v1
+#       with:
+#         token: ${{ secrets.TOK }} #Github Token
+#         # omarahmed199/ArgocdTest
+#         repository: ${{ github.actor }}/ArgocdTest
+#         event-type: new-image
+#         client-payload: '{"image": "${{ env.login_server }}/${{ env.IMAGE_NAME }}:${{ github.run_number }}"}'
+
+    # DO MY BUILD HERE
+    # IN CASE OF FAILURE, THE STEP BELOW WILL NOT RUN.
+    
+    - name: Minor version for each merge
+      id: taggerFinal
+      uses: anothrNick/github-tag-action@1.67.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.TOK }}
+        WITH_V: true
+        DEFAULT_BUMP: none
+    - name: echo new tag
+      run: |
+        echo "The next tag version will be: ${{ steps.taggerFinal.outputs.new_tag }}"
+    - name: echo tag
+      run: |
+        echo "The current tag is: ${{ steps.taggerFinal.outputs.tag }}"
+    - name: echo part
+      run: |
+        echo "The version increment was: ${{ steps.taggerFinal.outputs.part }}"
+    - name: Check Output
+      run: |
+        echo "part is now ${{ steps.taggerFinal.outputs.part }}"
+        if [[ "${{ steps.taggerFinal.outputs.part }}" == "none" ]]; then
+          echo "Output is null."
+          exit 1
+        else
+          echo "Output is not null."
+        fi
+
+
+    # - name: Check on failures
+    #   if: ${{ steps.taggerFinal.outputs.new_tag }} == ${{ steps.taggerFinal.outputs.tag }}
+    #   run: echo "error"
+    # - name: Create Release
+    #   id: create_release
+    #   uses: actions/create-release@v1
+    #   env:
+    #     GITHUB_TOKEN: ${{ secrets.TOK }} # This token is provided by Actions, you do not need to create your own token
+    #   with:
+    #     tag_name: ${{ steps.taggerFinal.outputs.new_tag }}
+    #     release_name: Release ${{ steps.taggerFinal.outputs.new_tag }}
+    #     body: |
+    #       Changes in this Release
+    #       - First Change
+    #       - Second Change
+    #     prerelease: false
+

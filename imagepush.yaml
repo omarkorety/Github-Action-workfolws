@@ -1,0 +1,68 @@
+name: docker_build_push_acr
+on:
+    workflow_run:
+      workflows:
+        - "create tages"
+      types:
+        - completed
+env:
+  IMAGE_NAME: search-deb
+  login_server: botittest3.azurecr.io
+jobs:
+  docker_build_push_acr:
+    name: 'Docker Build and Push to ACR'
+    runs-on: ubuntu-latest
+    # environment: develoopment
+ 
+    defaults:
+      run:
+        shell: bash
+        
+    steps:
+    # Checkout the repository to the GitHub Actions runner
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Minor version for each merge
+      id: taggerDryRun
+      uses: anothrNick/github-tag-action@1.36.0
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN  }}
+        WITH_V: true
+        DRY_RUN: true
+    # step to login to acr using username and password
+    # - name: 'Docker Login'
+    #   uses: azure/docker-login@v1
+    #   with:
+    #     login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+    #     username: ${{ secrets.REGISTRY_USERNAME }}
+    #     password: ${{ secrets.REGISTRY_PASSWORD }}
+    -
+      name: Login to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Get previous tag
+      id: previoustag
+      uses: "WyriHaximus/github-action-get-previous-tag@v1"
+#step to buil the image then push it to ACR 
+    - name: Build the search image and push it to ACR
+      uses: docker/build-push-action@v2
+      with:
+        push: true
+        # tags: ${{ env.login_server }}/${{ env.IMAGE_NAME }}:${{ github.run_number }} #here is the path of the docker image in ACR 
+        # tags: ${{ env.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}:${{ github.run_number }} #here is the path of the docker image in ACR 
+        tags: omarkorety/${{ env.IMAGE_NAME }}:${{ steps.previoustag.outputs.tag }} #here is the path of the docker image in ACR 
+        # tags: omarkorety/search-dev:latest
+        file: ./docker/search/Dockerfile #PATH OF Dockerfile 
+
+    - name: Repository Dispatch
+      uses: peter-evans/repository-dispatch@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN  }} #Github Token
+        # omarahmed199/ArgocdTest
+        repository: ${{ github.actor }}/ArgocdTest
+        event-type: new-image
+        client-payload: '{"image": "${{ env.login_server }}/${{ env.IMAGE_NAME }}:${{ steps.previoustag.outputs.tag }}"}'
